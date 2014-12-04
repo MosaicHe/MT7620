@@ -1,4 +1,4 @@
-EXEC = client
+EXEC = module
 CFLAGS += -I$(ROOTDIR)/$(LINUXDIR)/drivers/char
 CFLAGS	+= -I$(ROOTDIR)/lib/libnvram
 LDLIBS	+= -lnvram
@@ -12,5 +12,5 @@ romfs:
 	$(ROMFSINST) /bin/$(EXEC)
 
 clean:
-	-rm -f $(EXEC) *.elf *.gdb *.o
+	-rm -f $(EXEC) *.elf *.gdb *.o *~
 
