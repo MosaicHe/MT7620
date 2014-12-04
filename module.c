@@ -126,7 +126,7 @@ int main(int argc, char *argv[])
 	serverip= nvram_bufget(RT2860_NVRAM, "Server_ipaddr");
 	if( (serverip == NULL) || strcmp( lan_ipaddr, getModuleIp( moduleID, dataBuf)) ||  (srv_fd=openServerSocket(PORT, serverip)) <0 ){	
 		
-		//anotherTry();
+		//get serverip through dhcp
 		system("udhcpc -i br0");
 		sleep(2);
 		serverip = (char*)malloc(16);
