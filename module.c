@@ -3,103 +3,44 @@
 #include "command.h"
 #include "tool.h"
 
-int checkId(int id)
-{
-	return 0;
-}
 
-
-char* getModuleIp( int id , char* ipaddr )
-{
-	int len;
-	int i = 0;
-	int s = 0;
-
-	char lastStr[5];
-	char n_lastStr[5];
-	strcpy(lastStr, strrchr(ipaddr, '.' ));
-	len = strlen(lastStr);
-	
-	for(i=0; i< len-1; i++){
-		lastStr[i]=lastStr[i+1];
-	}
-	lastStr[len-1] = '\0';
-	s = atoi(lastStr);
-	s += id;
-	len = strlen(ipaddr);
-	
-	for(i=strlen(lastStr); i>0; i--){
-		ipaddr[len-i]='\0';
-	}
-	
-	sprintf(n_lastStr, "%d", s);
-	strcat(ipaddr, n_lastStr);
-
-	printf( "ip: %s\n", ipaddr);
-	return ipaddr;
-}
-
-int getServerIPbyDns( char* s)
+/*
+ * try get serverip through udhcpc, 
+ *  and reset "lan_ipaddr" and "g_serverip";
+ */
+int anotherWayGetServerip()
 {
 	int ret;
-	char buf[128];
-	FILE *fp;
-	char* p;
-	
-	fp = fopen(FILENAME, "r");
-	if(fp==NULL)
-		return -1;
+	char item[128];
+	char cmd[256];
 
-	ret = fgets(buf, 128, fp);
-	if(ret < 0)
-		return ret;	
-	
-	strtok(buf," ");
-	p = strtok(NULL, " ");
-	if(p)
-		strcpy(s, p);
-	else
-		return -1;
-	
-	return 0;
-}
-
-
-
-#if 0
-/*
- * try get serverip through udhcpc, and reset "lan_ipaddr" and "Serverip";
- */
-int anotherTry()
-{
 	system("udhcpc -i br0");
 	sleep(2);
-	serverip = (char*)malloc(16);
-	ret = getServerIPbyDns( serverip );	
-	deb_print("get serverip:%s\n",serverip);
+	g_serverip = (char*)malloc(16);
+	ret = getServerIPbyDns( g_serverip );	
+	deb_print("get g_serverip:%s\n",g_serverip);
 
 	bzero( item, sizeof(item) );
 	sprintf(item, "Server_ipaddr");
-	nvram_bufset(RT2860_NVRAM, item, serverip);
+	nvram_bufset(RT2860_NVRAM, item, g_serverip);
 	nvram_commit(RT2860_NVRAM);
 
 	bzero(item, sizeof(item));
 	sprintf(item, "lan_ipaddr");
-	getModuleIp( moduleID, dataBuf);
-	nvram_bufset(RT2860_NVRAM, item, dataBuf);
+
+	g_lanip = (char*)malloc(16);
+	getModuleIp( g_moduleID, g_lanip);
+	nvram_bufset(RT2860_NVRAM, item, g_lanip);
 	nvram_commit(RT2860_NVRAM);
 
 	system("killall udhcpc");
 
-	lan_ipaddr= nvram_bufget(RT2860_NVRAM, "lan_ipaddr");
 	bzero(cmd, sizeof(cmd));
-	sprintf(cmd, "ifconfig br0 %s", lan_ipaddr);
+	sprintf(cmd, "ifconfig br0 %s", g_lanip);
 	system(cmd);
-	deb_print("ifconfig br0 %s\n",lan_ipaddr);
+	deb_print("ifconfig br0 %s\n", g_lanip);
 	return 0;
 }
-#endif
-
 
 
 int main(int argc, char *argv[])
@@ -110,81 +51,31 @@ int main(int argc, char *argv[])
 	char dataBuf[DATASIZE];
 	int dataLen;
 	char cmd[256];
-	char *lan_ipaddr = NULL;
-//	char initip[256] = INITIP;
-	char *p_id;	
+	char *p_idStr;
 	char item[256];
-	
-	p_id = nvram_bufget(RT2860_NVRAM, "moduleID");
-	if(p_id==NULL || checkId(p_id)){
+	p_idStr = nvram_bufget(RT2860_NVRAM, "moduleID");
+	g_moduleID = atoi(p_idStr);
+	if(p_idStr==NULL || checkId(g_moduleID)){
 		/* FIXME*/
-		nvram_bufset(RT2860_NVRAM, "moduleID", p_id);
+		nvram_bufset(RT2860_NVRAM, "moduleID", p_idStr);
 	}
-	deb_print("get moduleID:%s\n", p_id);
-	moduleID = atoi(p_id);
-	lan_ipaddr= nvram_bufget(RT2860_NVRAM, "lan_ipaddr");
-	serverip= nvram_bufget(RT2860_NVRAM, "Server_ipaddr");
-	if( (serverip == NULL) || strcmp( lan_ipaddr, getModuleIp( moduleID, dataBuf)) ||  (srv_fd=openServerSocket(PORT, serverip)) <0 ){	
+	deb_print("get moduleID:%s\n", p_idStr);
+	g_lanip= nvram_bufget(RT2860_NVRAM, "lan_ipaddr");
+	g_serverip= nvram_bufget(RT2860_NVRAM, "Server_ipaddr");
+	if( (g_serverip == NULL) || strcmp( g_lanip, getModuleIp( g_moduleID, dataBuf)) || (srv_fd=openServerSocket(PORT, g_serverip)) <0 )
+	{	
 		
-		//get serverip through dhcp
-		system("udhcpc -i br0");
-		sleep(2);
-		serverip = (char*)malloc(16);
-		ret = getServerIPbyDns( serverip );	
-		deb_print("get serverip:%s\n",serverip);
-
-		bzero( item, sizeof(item) );
-		sprintf(item, "Server_ipaddr");
-		nvram_bufset(RT2860_NVRAM, item, serverip);
-		nvram_commit(RT2860_NVRAM);
-
-		bzero(item, sizeof(item));
-		sprintf(item, "lan_ipaddr");
-		getModuleIp( moduleID, dataBuf);
-		nvram_bufset(RT2860_NVRAM, item, dataBuf);
-		nvram_commit(RT2860_NVRAM);
-
-		system("killall udhcpc");
-
-		lan_ipaddr= nvram_bufget(RT2860_NVRAM, "lan_ipaddr");
-		bzero(cmd, sizeof(cmd));
-		sprintf(cmd, "ifconfig br0 %s", lan_ipaddr);
-		system(cmd);
-		deb_print("ifconfig br0 %s\n",lan_ipaddr);
-
-		srv_fd =  openServerSocket(PORT, serverip);
+		//get g_serverip through dhcp
+		anotherWayGetServerip();
+		srv_fd =  openServerSocket(PORT, g_serverip);
 		if(srv_fd < 0){
 			perror("can't connect to server!\n");
 			exit(1);
-		}		
+		}	
 	}
-	
 	val = register2Server();
-	
-	deb_print("wait for  server command......\n");
-	while(1){
-		deb_print("recvData....\n");
-		ret = recvData(srv_fd, &cmdType, dataBuf, &dataLen, 0);
-		if(ret < 0){
-			perror("socket read error\n");
-			close(srv_fd);
-			exit(-1);
-		}else if(ret == 0){
-			// heartbeat test
-			//heartbeatTest();
-		}else{
-			if(cmdType == CMD_CLOSE)
-				exit(1);
-			else{
-				val = doCommand( cmdType, dataBuf, &dataLen );
-				if(val < 0){
-					perror("doCommand error!\n");
-					continue;
-				}
-			}
-		}
-	}
-	free(serverip);
-	close(srv_fd);
+
+	free(g_serverip);
+	free(g_lanip);
 	return 0;
 }

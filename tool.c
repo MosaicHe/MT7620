@@ -4,8 +4,9 @@
 #include	<sys/ioctl.h>
 #include	<net/if.h>
 #include	<net/route.h>
-#include    	<dirent.h>
+#include    <dirent.h>
 #include	"module.h"
+#include   "nvram.h"
 
 /*
  * arguments: 
@@ -23,41 +24,30 @@ int openServerSocket(int srv_port, char* serverIp)
 	peer_addr.sin_family = PF_INET;
 	peer_addr.sin_port = htons(srv_port); 
 	peer_addr.sin_addr.s_addr =  inet_addr(serverIp);  
-	
-	deb_print("before while loop\n");
-	
-	for(i=0; i<3; i++){
-		deb_print("in while loop\n");
-		fd = socket(PF_INET,SOCK_STREAM,0);
-		if(fd < 0){
-			deb_print("fd=%d\n",fd);
-			perror("can't open socket\n");
-			exit(1);
-		}
-		deb_print("i=%d\n", i);
-		ret = connect( fd, (struct sockaddr *)&peer_addr, sizeof(peer_addr));
-		if(ret < 0){
-			sleep(1);
-			close(fd);
-		}else
-			return fd;
+
+	fd = socket(PF_INET,SOCK_STREAM,0);
+	if(fd < 0){
+		perror("can't open socket\n");
+		exit(1);
 	}
+	deb_print("i=%d\n", i);
+	
 	return fd;
 }
 
 
-int sendData(int fd, int id, int dataType, void* buf, int buflen)
+int sendData(int fd, int dataType, void* buf, int buflen)
 {
 	int ret  = -1;
 	msg *p_responseBuf;
 	p_responseBuf = (msg*)malloc(sizeof(msg));
 	bzero( p_responseBuf, sizeof(msg));
 	
-	p_responseBuf->id = id;
-	p_responseBuf->cmd = dataType;
+	p_responseBuf->moduleID = g_moduleID;
+	p_responseBuf->dataType = dataType;
 	if(buflen > 0){
-		p_responseBuf->bufsize = buflen;
-		memcpy( p_responseBuf->buf, buf, buflen);
+		p_responseBuf->dataSize = buflen;
+		memcpy( p_responseBuf->dataBuf, buf, buflen);
 	}
 	deb_print("send data Type:%d,length:%d\n", dataType, buflen);
 	ret = write(fd, p_responseBuf, sizeof(msg));
@@ -91,7 +81,7 @@ int recvData(int fd, int *dataType, void* buf, int* buflen, int time)
 	if(ret < 0){
 		perror("select error!\n");
 	}else if(ret == 0 ){
-//		deb_print("select timeout\n");
+		deb_print("select timeout\n");
 	}else{
 		deb_print("read data\n");
 		ret = read(fd, &msgbuf, sizeof(msg));
@@ -99,38 +89,19 @@ int recvData(int fd, int *dataType, void* buf, int* buflen, int time)
 			perror("Socket read error\n");
 			return -1;
 		}
-		*dataType = msgbuf.cmd;
+		*dataType = msgbuf.dataType;
 		deb_print("recv data: %d\n",*dataType);
-		*buflen = msgbuf.bufsize;
-		memcpy(buf, msgbuf.buf, msgbuf.bufsize);
+		*buflen = msgbuf.dataSize;
+		memcpy(buf, msgbuf.dataBuf, msgbuf.dataSize);
 		return ret;
 	}
-	
+
 	if(time > 0)
 		free(p_tv);
 
 	return ret;
 
 }
-
-#if 0
-void client_print( client* p)
-{
-	printf("      id: %d\n", p->id);
-	printf("      fd: %d\n", p->fd);
-	
-	printf("    ssid: %s\n", p->ssid);
-	printf("     mac: %s\n", p->mac);
-	printf(" channel: %d\n", p->channel);
-	
-	if(p->have5g){
-		printf("5G\n");
-		printf("    ssid: %s\n", p->ssid_5g);
-		printf("     mac: %s\n", p->mac_5g);
-		printf(" channel: %d\n", p->channel_5g);
-	}
-}
-#endif
 
 /*
  * arguments: ifname  - interface name
@@ -231,6 +202,103 @@ int getIfIp(char *ifname, char *if_addr)
 extern int initInternet(void)
 {
 	system("internet.sh");
+}
+
+
+extern moduleInfo* getModuleInfo()
+{
+	moduleInfo *p_module;
+	int channel, channel_5g;
+
+	p_module = malloc(sizeof(moduleInfo));
+	bzero(p_module, sizeof(moduleInfo));
+	
+	const char* ssid = nvram_bufget(RT2860_NVRAM, "SSID1");
+	memcpy(p_module->ssid_24g, ssid, strlen(ssid));
+	
+	const char* ch = nvram_bufget(RT2860_NVRAM, "Channel");
+	channel = atoi(ch);
+	p_module->channel_24g = channel;
+	
+	getIfMac("ra0", p_module->mac_24g);
+	
+	if( !getIfLive("rai0") ){
+		p_module->state_5g = 1;
+		char *ssid_5g = nvram_bufget(RTDEV_NVRAM, "SSID1");
+		memcpy(p_module->ssid_5g, ssid_5g, strlen(ssid_5g));
+		
+		const char* ch_5g = nvram_bufget(RTDEV_NVRAM, "Channel");
+		channel_5g = atoi(ch_5g);
+		p_module->channel_5g = channel_5g;
+		getIfMac("rai0", p_module->mac_5g);
+	}else{
+		p_module->state_5g = -1;
+	}
+	return p_module;
+}
+
+int checkId(int id)
+{
+	return 0;
+}
+
+
+char* getModuleIp( int id , char* ipaddr )
+{
+	int len;
+	int i = 0;
+	int s = 0;
+
+	char lastStr[5];
+	char n_lastStr[5];
+	strcpy(lastStr, strrchr(ipaddr, '.' ));
+	len = strlen(lastStr);
+	
+	for(i=0; i< len-1; i++){
+		lastStr[i]=lastStr[i+1];
+	}
+	lastStr[len-1] = '\0';
+	s = atoi(lastStr);
+	s += id;
+	len = strlen(ipaddr);
+	
+	for(i=strlen(lastStr); i>0; i--){
+		ipaddr[len-i]='\0';
+	}
+	
+	sprintf(n_lastStr, "%d", s);
+	strcat(ipaddr, n_lastStr);
+
+	printf( "ip: %s\n", ipaddr);
+	return ipaddr;
+}
+
+/*
+ *
+ */
+int getServerIPbyDns( char* s)
+{
+	int ret;
+	char buf[128];
+	FILE *fp;
+	char* p;
+	
+	fp = fopen(FILENAME, "r");
+	if(fp==NULL)
+		return -1;
+
+	ret = fgets(buf, 128, fp);
+	if(ret < 0)
+		return ret;	
+	
+	strtok(buf," ");
+	p = strtok(NULL, " ");
+	if(p)
+		strcpy(s, p);
+	else
+		return -1;
+	
+	return 0;
 }
 
 

@@ -18,44 +18,32 @@ typedef struct{
 int register2Server()
 {
 	int ret = -1;
-	int channel, channel_5g;
-	printf("hello cf_moduleon\n");
-	module_info module;
-	bzero(&module, sizeof(module_info));
-	module.moduleID = moduleID;
+	int dataType;
+	char buf[DATASIZE];
+	int buflen;
+
+	printf("register2Server\n");
+	moduleInfo *p_module;
+	p_module = getModuleInfo();
 	
-	const char* ssid = nvram_bufget(RT2860_NVRAM, "SSID1");
-	memcpy(module.ssid_24g, ssid, strlen(ssid));
-	
-	const char* ch = nvram_bufget(RT2860_NVRAM, "Channel");
-	channel = atoi(ch);
-	module.channel_24g = channel;
-	
-	getIfMac("ra0", module.mac_24g);
-	
-	if( !getIfLive("rai0") ){
-		module.have5g = 1;
-		char *ssid_5g = nvram_bufget(RTDEV_NVRAM, "SSID1");
-		memcpy(module.ssid_5g, ssid_5g, strlen(ssid_5g));
-		
-		const char* ch_5g = nvram_bufget(RTDEV_NVRAM, "Channel");
-		channel_5g = atoi(ch_5g);
-		module.channel_5g = channel_5g;
-		getIfMac("rai0", module.mac_5g);
-	}else{
-		module.have5g = 0;
+	ret = sendData(srv_fd, REGISTER, p_module, sizeof(moduleInfo));
+	if(ret < 0){
+		/* FIXME */
+		printf("%s:sendData error",__FUNCTION__);
+	}
+
+	ret = recvData(srv_fd, &dataType, buf, &buflen, 1);
+	if(ret<0){
+		printf("%s:recvData error,__FUNCTION__");
+		exit(1);
 	}
 	
-//	module_info_print( &module);
-	
-	ret = sendData(srv_fd, moduleID, REGISTER,  &module, sizeof(module_info));
-	return ret;
-	
+	close(srv_fd);	
+
 }
 
 //RT2860_NVRAM
 //RTDEV_NVRAM
-
 int respose_setModule(char* buf, int *len)
 {
 	int i, ret, mc;
@@ -84,7 +72,7 @@ int respose_setModule(char* buf, int *len)
 		nvram_bufset( ndev, item, value);
 	}
 	ret = nvram_commit( RTDEV_NVRAM );
-	ret = sendData(srv_fd, moduleID, GET_MODULE,  &ret, sizeof(ret));
+	ret = sendData(srv_fd, GET_MODULE,  &ret, sizeof(ret));
 	
 	system("internet.sh");
 	return ret;
@@ -112,7 +100,7 @@ int respose_getModule(char* buf, int *len)
 
 	value = nvram_bufget( ndev, mn.item);
 	strcpy(mn.value, value);
-	ret = sendData(srv_fd, moduleID, GET_MODULE,  &mn, sizeof(moduleNvram));
+	ret = sendData(srv_fd, GET_MODULE,  &mn, sizeof(moduleNvram));
 	return ret;
 }
 

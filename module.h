@@ -49,26 +49,26 @@
 pthread_mutex_t mutex;
 
 typedef struct{
-	unsigned int cmd;
-	unsigned char id;
-	unsigned int bufsize;
-	char buf[DATASIZE];
+	unsigned char moduleID;
+	unsigned int dataType;
+	unsigned int dataSize;
+	char dataBuf[DATASIZE];
 }msg;
 
 typedef struct{
 	char SN[12];
 	char fwVersion;
-	int  moduleID;
-	int fd;
+
+	char state_24g;
 	char ssid_24g[36];
 	char mac_24g[18];
 	int channel_24g;
 	
-	int have5g;
+	char state_5g;
 	char ssid_5g[36];
 	char mac_5g[18];
 	int channel_5g;
-}module_info;
+}moduleInfo;
 
 #if 0
 typedef struct{
@@ -119,8 +119,9 @@ typedef struct{
 int srv_ip;
 int srv_fd;
 
-static char* serverip;
-static int moduleID;
+static char* g_serverip;
+static char* g_lanip;
+static int g_moduleID;
 
 #endif  // __CLIENT_H
 
