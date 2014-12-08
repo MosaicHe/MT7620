@@ -10,41 +10,14 @@ typedef struct{
 }commandNode;
 
 
-#define REGISTER 	 22
 #define SET_MODULE 	 23
 #define GET_MODULE	 24
+#define RESET_MODULE 25
 #define CLOSE		 0
-
-int register2Server()
-{
-	int ret = -1;
-	int dataType;
-	char buf[DATASIZE];
-	int buflen;
-
-	printf("register2Server\n");
-	moduleInfo *p_module;
-	p_module = getModuleInfo();
-	
-	ret = sendData(srv_fd, REGISTER, p_module, sizeof(moduleInfo));
-	if(ret < 0){
-		/* FIXME */
-		printf("%s:sendData error",__FUNCTION__);
-	}
-
-	ret = recvData(srv_fd, &dataType, buf, &buflen, 1);
-	if(ret<0){
-		printf("%s:recvData error,__FUNCTION__");
-		exit(1);
-	}
-	
-	close(srv_fd);	
-
-}
 
 //RT2860_NVRAM
 //RTDEV_NVRAM
-int respose_setModule(char* buf, int *len)
+int response_getModule(char* buf, int *len)
 {
 	int i, ret, mc;
 	moduleNvram mn;
@@ -59,7 +32,7 @@ int respose_setModule(char* buf, int *len)
 		bzero(nvramDev, 6);
 		bzero(item, 128);
 		bzero(value, 128);
-		strcpy(&mn, buf+i*sizeof(moduleNvram));
+		memcpy(&mn, buf+i*sizeof(moduleNvram), sizeof(mn));
 		strcpy(nvramDev, mn.nvramDev);
 		strcpy(item, mn.item);
 		strcpy(value, mn.value);
@@ -78,7 +51,7 @@ int respose_setModule(char* buf, int *len)
 	return ret;
 }
 
-int respose_getModule(char* buf, int *len)
+int response_setModule(char* buf, int *len)
 {
 	int i, ret;
 	moduleNvram mn;
@@ -91,9 +64,9 @@ int respose_getModule(char* buf, int *len)
 	bzero(nvramDev, 6);
 	bzero(item, 128);
 	bzero(value, 128);
-	strcpy(&mn, buf);
+	memcpy(&mn, buf, sizeof(mn));
 
-	if(!strcmp( &(mn.nvramDev), "2860"))
+	if(!strcmp( mn.nvramDev, "2860"))
 		ndev = RT2860_NVRAM;
 	else
 		ndev = RTDEV_NVRAM;
@@ -105,11 +78,25 @@ int respose_getModule(char* buf, int *len)
 }
 
 
-commandNode cmdTable[]={
-	{SET_MODULE, respose_setModule},
-	{GET_MODULE, respose_getModule},
-	
+int response_heartbeat(char* buf, int *len){
+	int ret;
+	ret = sendData(srv_fd, HEARTBEAT,  NULL, 0);
+	return ret;
+}
 
+
+int response_resetModule(char* buf, int *len){
+	int ret;
+	ret = sendData(srv_fd, RESET_MODULE,  NULL, 0);
+	/* FIXME to reset module*/
+	return ret;
+}
+
+commandNode cmdTable[]={
+	{HEARTBEAT,  response_heartbeat},
+	{SET_MODULE, response_setModule},
+	{GET_MODULE, response_getModule},
+	{RESET_MODULE, response_resetModule},
 };
 
 #define CMDTABLESIZE  sizeof(cmdTable)/sizeof(commandNode)

@@ -34,7 +34,7 @@
 #define deb_print(fmt, arg...)
 #endif	//DEBUG
 
-#define DATASIZE    256
+#define DATASIZE    1024
 #define PORT 8000
 #define PORT2 8001
 #define SRV_IP "192.168.1.130"
@@ -57,7 +57,7 @@ typedef struct{
 
 typedef struct{
 	char SN[12];
-	char fwVersion;
+	char fwVersion[16];
 
 	char state_24g;
 	char ssid_24g[36];
@@ -107,21 +107,32 @@ typedef struct{
 }moduleNvram;
 
 
-#define CMD_CLOSE 0
-#define CMD_HEARTBEAT 1
+#define REQ_HELLO   		1
+#define REQ_FIRTWARE_UPDATE 2
+#define REQ_CONFIGUARTION   3
+#define REQ_RUN 			4
 
-#define RSP_RETURN   200
-#define RQ_IP  201
-#define RSP_IP 202
-#define RSP_HEARTBEAT  203
-
+#define HEARTBEAT 5
 
 int srv_ip;
-int srv_fd;
+static int srv_fd;
 
+static struct sockaddr_in g_servaddr;
 static char* g_serverip;
 static char* g_lanip;
 static int g_moduleID;
+static char g_state;
+static moduleInfo *p_module;
+
+#define STATE_IDLE 0
+#define STATE_HELLO 1
+#define STATE_FIRMWARE 2
+#define STATE_CONFIG 3
+#define STATE_RUN 4
+
+
+#define MAXCOUNTER 5
+#define TIMEOUT 10
 
 #endif  // __CLIENT_H
 

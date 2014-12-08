@@ -11,6 +11,7 @@ moduleInfo* getModuleInfo();
 int getServerIPbyDns( char* s);
 char* getModuleIp( int id , char* ipaddr );
 int checkId(int id);
+int waitForServerBroadcast(struct sockaddr_in* p_addr);
 //void client_print( client* p);
 
 #endif __TOOL_H
