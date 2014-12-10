@@ -109,10 +109,17 @@ typedef struct{
 
 #define REQ_HELLO   		1
 #define REQ_FIRTWARE_UPDATE 2
-#define REQ_CONFIGUARTION   3
+#define REQ_CONFIG		    3
 #define REQ_RUN 			4
+#define HEARTBEAT 			5
 
-#define HEARTBEAT 5
+#define STATE_IDLE 					0
+#define STATE_HELLO					1
+#define STATE_FIRMWARE_CHECKED 		2
+#define STATE_CONFIG 				3
+#define STATE_RUN 					4
+
+
 
 int srv_ip;
 static int srv_fd;
@@ -124,11 +131,7 @@ static int g_moduleID;
 static char g_state;
 static moduleInfo *p_module;
 
-#define STATE_IDLE 0
-#define STATE_HELLO 1
-#define STATE_FIRMWARE 2
-#define STATE_CONFIG 3
-#define STATE_RUN 4
+
 
 
 #define MAXCOUNTER 5

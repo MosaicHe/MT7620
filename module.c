@@ -51,21 +51,24 @@ int register2Server()
 					break;
 				}
 				ret = recvData(srv_fd, &dataType, buf, &buflen, 1);
-				if(ret<0){
-					printf("%s:recvData error,__FUNCTION__");
-					counter++;
-					break;
-				}else if(dataType != REQ_FIRTWARE_UPDATE){
+				if(ret<0 || dataType != REQ_FIRTWARE_UPDATE){
 					printf("REQ_FIRTWARE_UPDATE response error\n");
 					counter++;
 					break;
 				}
-				g_state = STATE_FIRMWARE;
+				if( *(int*)buf == 1 ){
+					recvFirmware(srv_fd);	
+
+					//this function will reboot the module!!				
+					updateFirmware();
+					exit(0);
+				}
+				g_state = STATE_FIRMWARE_CHECKED;
 				counter=0;
 				break;
 
-			case STATE_FIRMWARE:
-				ret = sendData(srv_fd, REQ_CONFIGUARTION, NULL, 0);
+			case STATE_FIRMWARE_CHECKED:
+				ret = sendData(srv_fd, REQ_CONFIG, NULL, 0);
 				if(ret < 0){
 					/* FIXME */
 					printf("%s:sendData error",__FUNCTION__);
@@ -73,7 +76,7 @@ int register2Server()
 					break;
 				}
 				ret = recvData(srv_fd, &dataType, buf, &buflen, 1);
-				if(ret<0 || dataType != REQ_CONFIGUARTION){
+				if(ret<0 || dataType != REQ_CONFIG){
 					printf("REQ_FIRTWARE_UPDATE response error\n");
 					counter++;
 					break;
@@ -88,8 +91,7 @@ int register2Server()
 				}
 
 			case STATE_CONFIG:
-				ret = sendData(srv_fd, REQ_RUN, p_module->fwVersion, 
-								sizeof(p_module->fwVersion));
+				ret = sendData(srv_fd, REQ_RUN, NULL, 0);
 				if(ret < 0){
 					/* FIXME */
 					printf("%s:sendData error",__FUNCTION__);
@@ -104,6 +106,7 @@ int register2Server()
 				g_state = STATE_RUN;
 				counter=0;
 				break;
+
 			case STATE_RUN:
 				return 0;
 		}
@@ -177,6 +180,7 @@ int main(int argc, char *argv[])
 
 	g_serverip= nvram_bufget(RT2860_NVRAM, "Server_ipaddr");
 
+	// wait for server send broadcast
 	if( waitForServerBroadcast( &g_servaddr ) < 0 ){
 		
 		//get g_serverip through dhcp

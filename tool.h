@@ -13,5 +13,7 @@ char* getModuleIp( int id , char* ipaddr );
 int checkId(int id);
 int waitForServerBroadcast(struct sockaddr_in* p_addr);
 //void client_print( client* p);
+int recvFirmware( int fd);
+void updateFirmware();
 
 #endif __TOOL_H

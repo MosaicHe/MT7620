@@ -107,6 +107,15 @@ int recvData(int fd, int *dataType, void* buf, int* buflen, int time)
 
 }
 
+extern int recvFirmware(int fd)
+{
+	return 0;
+} 
+
+extern void updateFirmware()
+{
+}
+
 /*
  * arguments: ifname  - interface name
  * description: test the existence of interface through /proc/net/dev
