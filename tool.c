@@ -87,7 +87,6 @@ int recvData(int fd, int *dataType, void* buf, int* buflen, int time)
 	}else if(ret == 0 ){
 		deb_print("select timeout\n");
 	}else{
-		deb_print("read data\n");
 		ret = read(fd, &msgbuf, sizeof(msg));
 		if(ret<0){
 			perror("Socket read error\n");
@@ -96,7 +95,8 @@ int recvData(int fd, int *dataType, void* buf, int* buflen, int time)
 		*dataType = msgbuf.dataType;
 		deb_print("recv data: %d\n",*dataType);
 		*buflen = msgbuf.dataSize;
-		memcpy(buf, msgbuf.dataBuf, msgbuf.dataSize);
+		if(*buflen != 0 && buf !=NULL)
+			memcpy(buf, msgbuf.dataBuf, msgbuf.dataSize);
 		return ret;
 	}
 
@@ -386,11 +386,12 @@ int waitForServerBroadcast(struct sockaddr_in* p_addr)
 					printf("\nClient connection information:\n\t IP: %s, port: %d\n",
 							(char *)inet_ntoa(from_addr.sin_addr),
 							ntohs(from_addr.sin_port));
-
+#if 0
 					//将数据发送给客户端
 					memcpy(buffer, IP_FOUND_ACK, strlen(IP_FOUND_ACK) + 1);
 					count = sendto(sock, buffer, strlen(buffer), 0,
 							(struct sockaddr*) &from_addr, from_len);
+#endif
 				}
 			}
 			memcpy(p_addr, &from_addr, sizeof(from_addr));

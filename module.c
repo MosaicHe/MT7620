@@ -185,17 +185,19 @@ int main(int argc, char *argv[])
 		
 		//get g_serverip through dhcp
 		anotherWayGetServerip();
-
 		g_servaddr.sin_family = PF_INET;
 		g_servaddr.sin_port = htons(PORT); 
 		g_servaddr.sin_addr.s_addr = inet_addr(g_serverip); 
 	}
-	
+	deb_print("server ip:%s, port:%d\n", inet_ntoa(g_servaddr.sin_addr),
+				ntohs(g_servaddr.sin_port));
+
 	srv_fd = socket(PF_INET,SOCK_STREAM,0);
 	if(srv_fd < 0){
 		perror("can't open socket\n");
 		exit(1);
 	}
+	g_servaddr.sin_port = htons(PORT);
 	ret = connect(srv_fd, (struct sockaddr*)&g_servaddr, sizeof(struct sockaddr));
 	if(ret < 0){
 		printf("cannt connect to server\n");
@@ -205,7 +207,7 @@ int main(int argc, char *argv[])
 	val = register2Server();
 	if(val < 0){
 		printf("register to server error\n");
-		exit(1);	
+		goto err;
 	}
 
 	while(1){
@@ -224,7 +226,9 @@ int main(int argc, char *argv[])
 			doCommand(cmdType, dataBuf, &dataLen);
 		}
 	}
-	
+
+err:
+	close(srv_fd);
 	free(p_module);
 	free(g_serverip);
 	free(g_lanip);
