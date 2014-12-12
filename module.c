@@ -1,9 +1,18 @@
-//#include "module.h"
-#include "nvram.h"
-#include "command.h"
-#include "tool.h"
+#include	<stdlib.h>
+#include	<stdio.h>
+#include	<string.h>
+#include	<sys/ioctl.h>
+#include	<net/if.h>
+#include	<net/route.h>
+#include    <dirent.h>
+#include	<sys/types.h>
+#include	<sys/socket.h>
+#include	<fcntl.h>
+#include 	"nvram.h"
+#include 	"command.h"
+#include 	"tool.h"
 
-
+#define MAX(a,b) (a>b?a:b)
 
 /*
  * register module to server 
@@ -108,6 +117,8 @@ int register2Server()
 				break;
 
 			case STATE_RUN:
+				close(srv_fd);
+				srv_fd = -1;
 				return 0;
 		}
 	}
@@ -159,12 +170,18 @@ int main(int argc, char *argv[])
 	int ret = -1;
 	int val = -1;
 	int cmdType;
-	char dataBuf[DATASIZE];
+	msg msgBuf;
 	int dataLen;
 	char cmd[256];
 	char *p_idStr;
 	char item[256];
 	int timeoutCounter=0;
+	int connFd=-1, listenFd;
+	struct timeval tv;
+	fd_set rdfds;
+	int maxfd =0;
+	struct sockaddr_in local_addr;
+	socklen_t addrlen;
 
 	//get Module information
 	p_module = getModuleInfo();
@@ -201,34 +218,85 @@ int main(int argc, char *argv[])
 	ret = connect(srv_fd, (struct sockaddr*)&g_servaddr, sizeof(struct sockaddr));
 	if(ret < 0){
 		printf("cannt connect to server\n");
+		close(srv_fd);
 		exit(1);
 	}
 
 	val = register2Server();
 	if(val < 0){
 		printf("register to server error\n");
-		goto err;
+		close(srv_fd);
+		exit(1);
+	}
+
+
+	//create listen socket
+	listenFd = socket(PF_INET,SOCK_STREAM,0);
+	if(listenFd < 0)
+	{
+		perror("socket");
+		exit(1);
+	}
+	bzero(&local_addr ,sizeof(local_addr));
+	local_addr.sin_family = PF_INET;
+	local_addr.sin_port = htons(LISTEN_PORT); 
+	local_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+	if( bind(listenFd, (struct sockaddr*)&local_addr, addrlen) < 0 )
+	{
+		perror("bind");
+		exit(1);
+	}
+
+	if( listen(listenFd, N) < 0)
+	{
+		perror("listen");
+		exit(1);
 	}
 
 	while(1){
-		ret = recvData( srv_fd, &cmdType, dataBuf, &dataLen, TIMEOUT);
-		if(ret = -1){
-			perror("recvData from socket error\n");		
-			exit(1);
-		}else if(ret==0){
-			printf("timeout\n");
+		maxfd = 0;
+		tv.tv_sec = 5;
+		FD_ZERO(&rdfds);
+		FD_SET(listenFd, &rdfds);
+		maxfd = MAX(maxfd, listenFd);
+		if(connFd>0){
+			FD_SET(connFd, &rdfds);	
+			maxfd = MAX(maxfd, connFd);	
+		}
+		ret = select( maxfd+1, &rdfds, NULL, NULL, &tv);
+		switch(ret){
+		case -1:
+			perror("recvData from error socket\n");
+			close(connFd);
+			connFd = -1;
+			break;
+		case 0:
+			printf("select timeout\n");
 			timeoutCounter++;
 			if( timeoutCounter>MAXCOUNTER ){
-				perror("lose connecting to server\n");				
-				exit(1);
+				deb_print("lose connecting to server\n");
+				exit(1);			
 			}
-		}else{
-			doCommand(cmdType, dataBuf, &dataLen);
+			break;
+		default:
+			if(FD_ISSET(listenFd, &rdfds)){
+				connFd = accept(listenFd, NULL, NULL);
+			}else if(FD_ISSET(connFd, &rdfds)){
+				ret = read(connFd, &msgBuf, sizeof(msg));
+				if(ret<0 || ret==0){
+					perror("read socket data error\n");
+					close(connFd);
+					connFd = -1;			
+				}else{
+					doCommand(cmdType, &msgBuf);
+					timeoutCounter = 0;
+				}
+			}
+			break;
 		}
 	}
 
-err:
-	close(srv_fd);
+	close(listenFd);
 	free(p_module);
 	free(g_serverip);
 	free(g_lanip);

@@ -101,10 +101,11 @@ commandNode cmdTable[]={
 
 #define CMDTABLESIZE  sizeof(cmdTable)/sizeof(commandNode)
 
-int doCommand(int cNum, char* buf, int *len )
+int doCommand(int cNum, msg* buf)
 {
 	int i = 0;
 	int ret = -1;
+#if 0
 	deb_print("cmd number is: %d\n", cNum);
 	for(i = 0; i< CMDTABLESIZE; i++){
 		if( cmdTable[i].commandNum == cNum ){
@@ -112,6 +113,7 @@ int doCommand(int cNum, char* buf, int *len )
 			return ret;
 		}
 	}
+#endif
 	printf("CommadNum is not in cmdTable\n");
 	return ret;
 }

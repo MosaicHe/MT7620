@@ -53,7 +53,7 @@ int sendData(int fd, int dataType, void* buf, int buflen)
 		p_responseBuf->dataSize = buflen;
 		memcpy( p_responseBuf->dataBuf, buf, buflen);
 	}
-	deb_print("send data Type:%d,length:%d\n", dataType, buflen);
+	deb_print("msg length:%d, send data Type:%d,length:%d\n", sizeof(msg), dataType, buflen);
 	ret = write(fd, p_responseBuf, sizeof(msg));
 	if(ret< 0){
 		perror("socket write error\n");
@@ -69,28 +69,26 @@ int recvData(int fd, int *dataType, void* buf, int* buflen, int time)
 	int ret =-1;
 	msg msgbuf;
 	fd_set rdfds;
-	struct timeval *p_tv;
+	struct timeval tv;
 
 	FD_ZERO(&rdfds);
 	FD_SET(fd, &rdfds);
 
-	if(time <= 0 ){
-		p_tv = NULL;
-	}else{
-		p_tv = (struct timeval*)malloc(sizeof(struct timeval));
-		p_tv->tv_sec = time;
-		p_tv->tv_usec = 0;
-	}
-	ret = select(fd+1, &rdfds, NULL, NULL, p_tv);
+	tv.tv_sec = time;
+	tv.tv_usec = 0;
+
+	ret = select(fd+1, &rdfds, NULL, NULL, &tv);
 	if(ret < 0){
 		perror("select error!\n");
+		return ret;
 	}else if(ret == 0 ){
 		deb_print("select timeout\n");
+		return ret;
 	}else{
 		ret = read(fd, &msgbuf, sizeof(msg));
 		if(ret<0){
 			perror("Socket read error\n");
-			return -1;
+			return ret;
 		}
 		*dataType = msgbuf.dataType;
 		deb_print("recv data: %d\n",*dataType);
@@ -100,11 +98,7 @@ int recvData(int fd, int *dataType, void* buf, int* buflen, int time)
 		return ret;
 	}
 
-	if(time > 0)
-		free(p_tv);
-
 	return ret;
-
 }
 
 extern int recvFirmware(int fd)

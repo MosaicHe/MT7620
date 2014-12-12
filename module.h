@@ -34,9 +34,9 @@
 #define deb_print(fmt, arg...)
 #endif	//DEBUG
 
-#define DATASIZE    1024
+#define DATASIZE    512
 #define PORT 8000
-#define PORT2 8001
+#define LISTEN_PORT 8001
 #define SRV_IP "192.168.1.130"
 #define N 5
 
