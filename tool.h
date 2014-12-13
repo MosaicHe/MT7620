@@ -16,4 +16,4 @@ int waitForServerBroadcast(struct sockaddr_in* p_addr);
 int recvFirmware( int fd);
 void updateFirmware();
 
-#endif __TOOL_H
+#endif //__TOOL_H

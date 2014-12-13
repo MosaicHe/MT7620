@@ -10,7 +10,8 @@
 #include	<fcntl.h>
 //#include	<linux/in.h>
 #include	"module.h"
-#include   "nvram.h"
+
+//#include   "nvram.h"
 
 #define IP_FOUND "server_broadcast"
 #define IP_FOUND_ACK "server_broadcast_ack"
@@ -53,7 +54,7 @@ int sendData(int fd, int dataType, void* buf, int buflen)
 		p_responseBuf->dataSize = buflen;
 		memcpy( p_responseBuf->dataBuf, buf, buflen);
 	}
-	deb_print("msg length:%d, send data Type:%d,length:%d\n", sizeof(msg), dataType, buflen);
+//	deb_print("msg length:%d, send data Type:%d, length:%d\n", sizeof(msg), dataType, buflen);
 	ret = write(fd, p_responseBuf, sizeof(msg));
 	if(ret< 0){
 		perror("socket write error\n");
@@ -219,7 +220,7 @@ extern moduleInfo* getModuleInfo()
 
 	p_module = malloc(sizeof(moduleInfo));
 	bzero(p_module, sizeof(moduleInfo));
-	
+#ifndef DEBUG_PC	
 	const char* ssid = nvram_bufget(RT2860_NVRAM, "SSID1");
 	memcpy(p_module->ssid_24g, ssid, strlen(ssid));
 	
@@ -241,6 +242,7 @@ extern moduleInfo* getModuleInfo()
 	}else{
 		p_module->state_5g = -1;
 	}
+#endif
 	return p_module;
 }
 
@@ -285,7 +287,7 @@ char* getModuleIp( int id , char* ipaddr )
  */
 int getServerIPbyDns( char* s)
 {
-	int ret;
+	char* ret;
 	char buf[128];
 	FILE *fp;
 	char* p;
@@ -295,8 +297,8 @@ int getServerIPbyDns( char* s)
 		return -1;
 
 	ret = fgets(buf, 128, fp);
-	if(ret < 0)
-		return ret;	
+	if(ret == NULL)
+		return -1;	
 	
 	strtok(buf," ");
 	p = strtok(NULL, " ");

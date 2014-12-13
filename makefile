@@ -1,7 +1,7 @@
 EXEC = module
 CFLAGS += -I$(ROOTDIR)/$(LINUXDIR)/drivers/char
-CFLAGS	+= -I$(ROOTDIR)/lib/libnvram
-LDLIBS	+= -lnvram
+#CFLAGS	+= -I$(ROOTDIR)/lib/libnvram
+#LDLIBS	+= -lnvram
 
 all: $(EXEC)
 

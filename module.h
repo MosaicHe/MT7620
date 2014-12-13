@@ -131,8 +131,7 @@ static int g_moduleID;
 static char g_state;
 static moduleInfo *p_module;
 
-
-
+#define DEBUG_PC
 
 #define MAXCOUNTER 5
 #define TIMEOUT 10

@@ -8,7 +8,7 @@
 #include	<sys/types.h>
 #include	<sys/socket.h>
 #include	<fcntl.h>
-#include 	"nvram.h"
+//#include 	"nvram.h"
 #include 	"command.h"
 #include 	"tool.h"
 
@@ -68,7 +68,7 @@ int register2Server()
 				if( *(int*)buf == 1 ){
 					recvFirmware(srv_fd);	
 
-					//this function will reboot the module!!				
+				       //this function will reboot the module!!				
 					updateFirmware();
 					exit(0);
 				}
@@ -135,7 +135,7 @@ int anotherWayGetServerip()
 	int ret;
 	char item[128];
 	char cmd[256];
-
+#ifndef DEBUG_PC
 	system("udhcpc -i br0");
 	sleep(2);
 	g_serverip = (char*)malloc(16);
@@ -161,6 +161,7 @@ int anotherWayGetServerip()
 	sprintf(cmd, "ifconfig br0 %s", g_lanip);
 	system(cmd);
 	deb_print("ifconfig br0 %s\n", g_lanip);
+#endif
 	return 0;
 }
 
@@ -185,7 +186,7 @@ int main(int argc, char *argv[])
 
 	//get Module information
 	p_module = getModuleInfo();
-
+#ifndef DEBUG_PC
 	p_idStr = nvram_bufget(RT2860_NVRAM, "moduleID");
 	g_moduleID = atoi(p_idStr);
 	if(p_idStr==NULL || checkId(g_moduleID)){
@@ -196,7 +197,7 @@ int main(int argc, char *argv[])
 	g_lanip= nvram_bufget(RT2860_NVRAM, "lan_ipaddr");
 
 	g_serverip= nvram_bufget(RT2860_NVRAM, "Server_ipaddr");
-
+#endif
 	// wait for server send broadcast
 	if( waitForServerBroadcast( &g_servaddr ) < 0 ){
 		

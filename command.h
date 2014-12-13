@@ -1,6 +1,9 @@
-#include "nvram.h"
+
 #include "tool.h"
 #include "module.h"
+
+//#include "nvram.h"
+
 
 typedef int ( *CommandFunction )( char* buf, int *len);
 
@@ -19,13 +22,14 @@ typedef struct{
 //RTDEV_NVRAM
 int response_getModule(char* buf, int *len)
 {
+
 	int i, ret, mc;
 	moduleNvram mn;
 	char nvramDev[6];
 	int  ndev;	
 	char item[128];
 	char value[128];
-
+#ifndef DEBUG_PC
 	mc = (*len)/sizeof(moduleNvram);
 	for(i = 0; i<mc; i++){
 		bzero(&mn, sizeof(mn));			
@@ -48,18 +52,20 @@ int response_getModule(char* buf, int *len)
 	ret = sendData(srv_fd, GET_MODULE,  &ret, sizeof(ret));
 	
 	system("internet.sh");
+#endif
 	return ret;
 }
 
 int response_setModule(char* buf, int *len)
 {
+
 	int i, ret;
 	moduleNvram mn;
 	char nvramDev[6];
 	int  ndev;	
 	char item[128];
 	char *value;
-
+#ifndef DEBUG_PC
 	bzero(&mn, sizeof(mn));			
 	bzero(nvramDev, 6);
 	bzero(item, 128);
@@ -74,6 +80,7 @@ int response_setModule(char* buf, int *len)
 	value = nvram_bufget( ndev, mn.item);
 	strcpy(mn.value, value);
 	ret = sendData(srv_fd, GET_MODULE,  &mn, sizeof(moduleNvram));
+#endif
 	return ret;
 }
 
