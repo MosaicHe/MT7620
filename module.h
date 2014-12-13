@@ -70,35 +70,11 @@ typedef struct{
 	int channel_5g;
 }moduleInfo;
 
-#if 0
 typedef struct{
-	char radioOnoff_24g;
-	char wifiOnoff_24g;
-	char ssid_24g[128];
-	char mac_24g[18];
-	int channel_24g;
-	char radioOnoff_5g;
-	char wifiOnoff_5g;
-	char ssid_5g[128];
-	char mac_5g[18];
-	int channel_5g;
-}setModule;
-
-
-typedef struct{
-	int 24g_stacliNum;
-	char 24g_stacli[20][18];
-	int 5g_stacliNum;
-	char 5g_stacli[50][18];
-}stacli;
-
-
-typedef struct{
-	long int 24g_statistics;
-	long int 5g_statistics;
-}statistics;
-#endif
-
+	unsigned int dataType;
+	unsigned int dataSize;
+	char dataBuf[DATASIZE];
+}UDPMessage;
 
 typedef struct{
 	char nvramDev[6];  // "2860" or "rtdev"
@@ -111,7 +87,6 @@ typedef struct{
 #define REQ_FIRTWARE_UPDATE 2
 #define REQ_CONFIG		    3
 #define REQ_RUN 			4
-#define HEARTBEAT 			5
 
 #define STATE_IDLE 					0
 #define STATE_HELLO					1
@@ -120,16 +95,21 @@ typedef struct{
 #define STATE_RUN 					4
 
 
+#define BROADCAST			100	
+#define HEARTBEAT 			101
+#define HEARTBEAT_ACK		102
+#define COMMAND				103
+#define COMMAND_SUCCEED		104
+#define COMMAND_FAIL		105
 
 int srv_ip;
 static int srv_fd;
 
-static struct sockaddr_in g_servaddr;
 static char* g_serverip;
 static char* g_lanip;
 static int g_moduleID;
 static char g_state;
-static moduleInfo *p_module;
+static moduleInfo g_moduleInfo;
 
 #define DEBUG_PC
 

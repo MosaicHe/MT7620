@@ -14,6 +14,9 @@
 
 #define MAX(a,b) (a>b?a:b)
 
+struct sockaddr_in server_addr;
+
+
 /*
  * register module to server 
  */
@@ -24,8 +27,23 @@ int register2Server()
 	char buf[DATASIZE];
 	int buflen;
 	int counter=0;
+	int srv_fd;
 
 	printf("register2Server\n");
+
+	srv_fd = socket(PF_INET,SOCK_STREAM,0);
+	if(srv_fd < 0){
+		perror("can't open socket\n");
+		exit(1);
+	}
+	server_addr.sin_port = htons(PORT);
+	ret = connect(srv_fd, (struct sockaddr*)&server_addr, sizeof(struct sockaddr));
+	if(ret < 0){
+		printf("can not connect to server\n");
+		close(srv_fd);
+		exit(1);
+	}
+
 	while(1){
 		if(counter > MAXCOUNTER){
 			g_state = STATE_IDLE;			
@@ -34,13 +52,14 @@ int register2Server()
 
 		switch(g_state){
 			case STATE_IDLE:
-				ret = sendData(srv_fd, REQ_HELLO, p_module, sizeof(moduleInfo));
+				ret = sendData(srv_fd, REQ_HELLO, &g_moduleInfo, sizeof(moduleInfo));
 				if(ret < 0){
 					/* FIXME */
 					printf("%s:sendData error",__FUNCTION__);
 					counter++;
 					break;
 				}
+
 				ret = recvData(srv_fd, &dataType, buf, &buflen, 1);
 				if(ret<0 || dataType != REQ_HELLO){
 					counter++;		
@@ -51,8 +70,12 @@ int register2Server()
 				break;
 
 			case STATE_HELLO:
-				ret = sendData(srv_fd, REQ_FIRTWARE_UPDATE, p_module->fwVersion, 
-								sizeof(p_module->fwVersion));
+#ifndef DEBUG_PC
+				ret = sendData(srv_fd, REQ_FIRTWARE_UPDATE, g_moduleInfo.fwVersion, 
+								sizeof(g_moduleInfo.fwVersion));
+#else
+				ret = sendData(srv_fd, REQ_FIRTWARE_UPDATE, NULL, 0);
+#endif
 				if(ret < 0){
 					/* FIXME */
 					printf("%s:sendData error\n",__FUNCTION__);
@@ -126,180 +149,90 @@ int register2Server()
 }
 
 
-/*
- * try get serverip through udhcpc, 
- *  and reset "lan_ipaddr" and "g_serverip";
- */
-int anotherWayGetServerip()
-{
-	int ret;
-	char item[128];
-	char cmd[256];
-#ifndef DEBUG_PC
-	system("udhcpc -i br0");
-	sleep(2);
-	g_serverip = (char*)malloc(16);
-	ret = getServerIPbyDns( g_serverip );	
-	deb_print("get g_serverip:%s\n",g_serverip);
 
-	bzero( item, sizeof(item) );
-	sprintf(item, "Server_ipaddr");
-	nvram_bufset(RT2860_NVRAM, item, g_serverip);
-	nvram_commit(RT2860_NVRAM);
-
-	bzero(item, sizeof(item));
-	sprintf(item, "lan_ipaddr");
-
-	g_lanip = (char*)malloc(16);
-	getModuleIp( g_moduleID, g_lanip);
-	nvram_bufset(RT2860_NVRAM, item, g_lanip);
-	nvram_commit(RT2860_NVRAM);
-
-	system("killall udhcpc");
-
-	bzero(cmd, sizeof(cmd));
-	sprintf(cmd, "ifconfig br0 %s", g_lanip);
-	system(cmd);
-	deb_print("ifconfig br0 %s\n", g_lanip);
-#endif
-	return 0;
-}
 
 
 int main(int argc, char *argv[])
 {
 	int ret = -1;
-	int val = -1;
-	int cmdType;
-	msg msgBuf;
-	int dataLen;
-	char cmd[256];
-	char *p_idStr;
-	char item[256];
-	int timeoutCounter=0;
-	int connFd=-1, listenFd;
-	struct timeval tv;
-	fd_set rdfds;
-	int maxfd =0;
-	struct sockaddr_in local_addr;
-	socklen_t addrlen;
+	int sock;
+	struct sockaddr_in local_addr; 
+	int server_len = sizeof(struct sockaddr_in);
+	int count = -1;
+	fd_set readfd; 
+	UDPMessage umsg;
+	struct timeval timeout;
+	timeout.tv_sec = 2;
+	timeout.tv_usec = 0;
+	g_state = STATE_IDLE;
 
-	//get Module information
-	p_module = getModuleInfo();
-#ifndef DEBUG_PC
-	p_idStr = nvram_bufget(RT2860_NVRAM, "moduleID");
-	g_moduleID = atoi(p_idStr);
-	if(p_idStr==NULL || checkId(g_moduleID)){
-		/* FIXME*/
-		nvram_bufset(RT2860_NVRAM, "moduleID", p_idStr);
-	}
-	deb_print("get moduleID:%s\n", p_idStr);
-	g_lanip= nvram_bufget(RT2860_NVRAM, "lan_ipaddr");
+	initiateModule();
 
-	g_serverip= nvram_bufget(RT2860_NVRAM, "Server_ipaddr");
-#endif
-	// wait for server send broadcast
-	if( waitForServerBroadcast( &g_servaddr ) < 0 ){
-		
-		//get g_serverip through dhcp
-		anotherWayGetServerip();
-		g_servaddr.sin_family = PF_INET;
-		g_servaddr.sin_port = htons(PORT); 
-		g_servaddr.sin_addr.s_addr = inet_addr(g_serverip); 
-	}
-	deb_print("server ip:%s, port:%d\n", inet_ntoa(g_servaddr.sin_addr),
-				ntohs(g_servaddr.sin_port));
-
-	srv_fd = socket(PF_INET,SOCK_STREAM,0);
-	if(srv_fd < 0){
-		perror("can't open socket\n");
-		exit(1);
-	}
-	g_servaddr.sin_port = htons(PORT);
-	ret = connect(srv_fd, (struct sockaddr*)&g_servaddr, sizeof(struct sockaddr));
-	if(ret < 0){
-		printf("cannt connect to server\n");
-		close(srv_fd);
-		exit(1);
+	sock = socket(AF_INET, SOCK_DGRAM, 0); 
+	if (sock < 0){
+		perror("sock error");
+		return -1;
 	}
 
-	val = register2Server();
-	if(val < 0){
-		printf("register to server error\n");
-		close(srv_fd);
-		exit(1);
+	memset((void*) &local_addr, 0, sizeof(struct sockaddr_in));
+	local_addr.sin_family = AF_INET;
+	local_addr.sin_addr.s_addr = htons(INADDR_ANY );
+	local_addr.sin_port = htons(LISTEN_PORT);
+
+	ret = bind(sock, (struct sockaddr*)&local_addr, sizeof(local_addr));
+	if (ret < 0){
+		perror("bind error");
+		return -1;
 	}
 
-
-	//create listen socket
-	listenFd = socket(PF_INET,SOCK_STREAM,0);
-	if(listenFd < 0)
+	while (1)
 	{
-		perror("socket");
-		exit(1);
-	}
-	bzero(&local_addr ,sizeof(local_addr));
-	local_addr.sin_family = PF_INET;
-	local_addr.sin_port = htons(LISTEN_PORT); 
-	local_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-	if( bind(listenFd, (struct sockaddr*)&local_addr, addrlen) < 0 )
-	{
-		perror("bind");
-		exit(1);
-	}
+		timeout.tv_sec = 10;
+		timeout.tv_usec = 0;
+	
+		FD_ZERO(&readfd);
+		FD_SET(sock, &readfd);
 
-	if( listen(listenFd, N) < 0)
-	{
-		perror("listen");
-		exit(1);
-	}
+		ret = select(sock + 1, &readfd, NULL, NULL, &timeout); 
+		switch (ret)
+		{
+			case -1: 
+				perror("select error:");
+				break;
+			case 0: 
+				printf("select timeout\n");
+				break;
+			default:
+				if (FD_ISSET(sock,&readfd)){
 
-	while(1){
-		maxfd = 0;
-		tv.tv_sec = 5;
-		FD_ZERO(&rdfds);
-		FD_SET(listenFd, &rdfds);
-		maxfd = MAX(maxfd, listenFd);
-		if(connFd>0){
-			FD_SET(connFd, &rdfds);	
-			maxfd = MAX(maxfd, connFd);	
-		}
-		ret = select( maxfd+1, &rdfds, NULL, NULL, &tv);
-		switch(ret){
-		case -1:
-			perror("recvData from error socket\n");
-			close(connFd);
-			connFd = -1;
-			break;
-		case 0:
-			printf("select timeout\n");
-			timeoutCounter++;
-			if( timeoutCounter>MAXCOUNTER ){
-				deb_print("lose connecting to server\n");
-				exit(1);			
-			}
-			break;
-		default:
-			if(FD_ISSET(listenFd, &rdfds)){
-				connFd = accept(listenFd, NULL, NULL);
-			}else if(FD_ISSET(connFd, &rdfds)){
-				ret = read(connFd, &msgBuf, sizeof(msg));
-				if(ret<0 || ret==0){
-					perror("read socket data error\n");
-					close(connFd);
-					connFd = -1;			
-				}else{
-					doCommand(cmdType, &msgBuf);
-					timeoutCounter = 0;
+					count = recvfrom(sock, &umsg, sizeof(UDPMessage), 0,
+							(struct sockaddr*)&server_addr, &server_len); 
+				
+					switch(umsg.dataType){
+						case BROADCAST:
+							printf("\nrecvfrom server broadcast:\n\t IP: %s, port: %d\n",
+								(char *)inet_ntoa(server_addr.sin_addr),
+								ntohs(server_addr.sin_port));
+
+							if(g_state == STATE_IDLE)
+								register2Server();
+							break;
+
+						case HEARTBEAT:
+							umsg.dataType = HEARTBEAT_ACK;
+							umsg.dataSize = 0;
+							count = sendto(sock, &umsg, sizeof(UDPMessage), 0,
+											(struct sockaddr*) &server_addr, server_len);
+							break;
+
+						case COMMAND:
+						break;
+
+						default:
+						break;
+					}
 				}
-			}
-			break;
 		}
 	}
-
-	close(listenFd);
-	free(p_module);
-	free(g_serverip);
-	free(g_lanip);
 	return 0;
 }

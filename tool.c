@@ -215,35 +215,40 @@ extern int initInternet(void)
 
 extern moduleInfo* getModuleInfo()
 {
-	moduleInfo *p_module;
 	int channel, channel_5g;
 
-	p_module = malloc(sizeof(moduleInfo));
-	bzero(p_module, sizeof(moduleInfo));
+	bzero(&g_moduleInfo, sizeof(moduleInfo));
 #ifndef DEBUG_PC	
 	const char* ssid = nvram_bufget(RT2860_NVRAM, "SSID1");
-	memcpy(p_module->ssid_24g, ssid, strlen(ssid));
+	memcpy(g_moduleInfo.ssid_24g, ssid, strlen(ssid));
 	
 	const char* ch = nvram_bufget(RT2860_NVRAM, "Channel");
 	channel = atoi(ch);
-	p_module->channel_24g = channel;
+	g_moduleInfo.channel_24g = channel;
 	
-	getIfMac("ra0", p_module->mac_24g);
+	getIfMac("ra0", g_moduleInfo.mac_24g);
 	
 	if( !getIfLive("rai0") ){
-		p_module->state_5g = 1;
+		g_moduleInfo.state_5g = 1;
 		char *ssid_5g = nvram_bufget(RTDEV_NVRAM, "SSID1");
-		memcpy(p_module->ssid_5g, ssid_5g, strlen(ssid_5g));
+		memcpy(g_moduleInfo.ssid_5g, ssid_5g, strlen(ssid_5g));
 		
 		const char* ch_5g = nvram_bufget(RTDEV_NVRAM, "Channel");
 		channel_5g = atoi(ch_5g);
-		p_module->channel_5g = channel_5g;
-		getIfMac("rai0", p_module->mac_5g);
+		g_moduleInfo.channel_5g = channel_5g;
+		getIfMac("rai0", g_moduleInfo.mac_5g);
 	}else{
-		p_module->state_5g = -1;
+		g_moduleInfo.state_5g = -1;
 	}
 #endif
-	return p_module;
+	return 0;
+}
+
+
+extern int initiateModule()
+{
+	g_state = STATE_IDLE;
+	getModuleInfo();
 }
 
 int checkId(int id)
