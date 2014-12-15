@@ -35,7 +35,7 @@
 #endif	//DEBUG
 
 #define DATASIZE    512
-#define PORT 8000
+#define PORT 		8000
 #define LISTEN_PORT 8001
 #define SRV_IP "192.168.1.130"
 #define N 5

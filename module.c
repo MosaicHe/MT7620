@@ -43,7 +43,7 @@ int register2Server()
 		close(srv_fd);
 		exit(1);
 	}
-
+	printf("connect to server\n");
 	while(1){
 		if(counter > MAXCOUNTER){
 			g_state = STATE_IDLE;			
@@ -160,7 +160,7 @@ int main(int argc, char *argv[])
 	int server_len = sizeof(struct sockaddr_in);
 	int count = -1;
 	fd_set readfd; 
-	UDPMessage umsg;
+	msg umsg;
 	struct timeval timeout;
 	timeout.tv_sec = 2;
 	timeout.tv_usec = 0;
@@ -205,7 +205,7 @@ int main(int argc, char *argv[])
 			default:
 				if (FD_ISSET(sock,&readfd)){
 
-					count = recvfrom(sock, &umsg, sizeof(UDPMessage), 0,
+					count = recvfrom(sock, &umsg, sizeof(msg), 0,
 							(struct sockaddr*)&server_addr, &server_len); 
 				
 					switch(umsg.dataType){
@@ -219,9 +219,12 @@ int main(int argc, char *argv[])
 							break;
 
 						case HEARTBEAT:
+							/* FIXME */
+							umsg.moduleID = g_moduleID;
 							umsg.dataType = HEARTBEAT_ACK;
 							umsg.dataSize = 0;
-							count = sendto(sock, &umsg, sizeof(UDPMessage), 0,
+							server_addr.sin_port= LISTEN_PORT;
+							count = sendto(sock, &umsg, sizeof(msg), 0,
 											(struct sockaddr*) &server_addr, server_len);
 							break;
 

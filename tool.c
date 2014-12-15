@@ -16,7 +16,7 @@
 #define IP_FOUND "server_broadcast"
 #define IP_FOUND_ACK "server_broadcast_ack"
 #define UPORT 9999
-
+#define MODULEID 1
 
 /*
  * arguments: incompatible
@@ -54,7 +54,7 @@ int sendData(int fd, int dataType, void* buf, int buflen)
 		p_responseBuf->dataSize = buflen;
 		memcpy( p_responseBuf->dataBuf, buf, buflen);
 	}
-//	deb_print("msg length:%d, send data Type:%d, length:%d\n", sizeof(msg), dataType, buflen);
+	deb_print("msg length:%d, send data Type:%d, length:%d\n", sizeof(msg), dataType, buflen);
 	ret = write(fd, p_responseBuf, sizeof(msg));
 	if(ret< 0){
 		perror("socket write error\n");
@@ -246,7 +246,8 @@ extern moduleInfo* getModuleInfo()
 
 
 extern int initiateModule()
-{
+{	
+	g_moduleID = MODULEID;
 	g_state = STATE_IDLE;
 	getModuleInfo();
 }
