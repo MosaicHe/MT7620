@@ -91,9 +91,9 @@ int recvData(int fd, int *dataType, void* buf, int* buflen, int time)
 			perror("Socket read error\n");
 			return ret;
 		}
-		*dataType = msgbuf.dataType;
-		deb_print("recv data: %d\n",*dataType);
+		*dataType = msgbuf.dataType;		
 		*buflen = msgbuf.dataSize;
+		deb_print("recv data %d, dataType:%d, dataSize:%d\n",ret, *dataType, *buflen);
 		if(*buflen != 0 && buf !=NULL)
 			memcpy(buf, msgbuf.dataBuf, msgbuf.dataSize);
 		return ret;
