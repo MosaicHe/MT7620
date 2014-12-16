@@ -149,9 +149,6 @@ int register2Server()
 }
 
 
-
-
-
 int main(int argc, char *argv[])
 {
 	int ret = -1;
@@ -220,10 +217,11 @@ int main(int argc, char *argv[])
 
 						case HEARTBEAT:
 							/* FIXME */
+							printf("HEARTBEAT\n");
 							umsg.moduleID = g_moduleID;
 							umsg.dataType = HEARTBEAT_ACK;
 							umsg.dataSize = 0;
-							server_addr.sin_port= LISTEN_PORT;
+							server_addr.sin_port= PORT2;
 							count = sendto(sock, &umsg, sizeof(msg), 0,
 											(struct sockaddr*) &server_addr, server_len);
 							break;
@@ -232,6 +230,7 @@ int main(int argc, char *argv[])
 						break;
 
 						default:
+							printf("msg dataType error\n");
 						break;
 					}
 				}
