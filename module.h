@@ -108,8 +108,8 @@ static int srv_fd;
 
 static char* g_serverip;
 static char* g_lanip;
-static int g_moduleID;
-static char g_state;
+int g_moduleID;
+char g_state;
 static moduleInfo g_moduleInfo;
 
 #define DEBUG_PC

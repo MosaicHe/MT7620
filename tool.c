@@ -16,7 +16,7 @@
 #define IP_FOUND "server_broadcast"
 #define IP_FOUND_ACK "server_broadcast_ack"
 #define UPORT 9999
-#define MODULEID 1
+#define MODULEID  1
 
 /*
  * arguments: incompatible

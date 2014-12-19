@@ -162,7 +162,7 @@ int main(int argc, char *argv[])
 	timeout.tv_sec = 2;
 	timeout.tv_usec = 0;
 	g_state = STATE_IDLE;
-
+	int timeoutCounter = 0;
 	initiateModule();
 
 	sock = socket(AF_INET, SOCK_DGRAM, 0); 
@@ -198,8 +198,14 @@ int main(int argc, char *argv[])
 				break;
 			case 0: 
 				printf("select timeout\n");
+				timeoutCounter++;
+				if(timeoutCounter>3){
+					printf("disconnected to server\n");
+					exit(-1);
+				}
 				break;
 			default:
+				timeoutCounter = 0;
 				if (FD_ISSET(sock,&readfd)){
 
 					count = recvfrom(sock, &umsg, sizeof(msg), 0,
@@ -217,11 +223,12 @@ int main(int argc, char *argv[])
 
 						case HEARTBEAT:
 							/* FIXME */
-							printf("HEARTBEAT\n");
-							umsg.moduleID = g_moduleID;
+							printf("HEARTBEAT, moduleID:%d\n",g_moduleID);
+							
+							umsg.moduleID = g_moduleID;  //fixme
 							umsg.dataType = HEARTBEAT_ACK;
 							umsg.dataSize = 0;
-							server_addr.sin_port= PORT2;
+							server_addr.sin_port= htons(PORT2);
 							count = sendto(sock, &umsg, sizeof(msg), 0,
 											(struct sockaddr*) &server_addr, server_len);
 							break;
