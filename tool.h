@@ -6,7 +6,7 @@
 
 int openServerSocket(int srv_port, char* serverIp);
 int sendData(int fd, int dataType, void* buf, int buflen);
-int recvData(int fd, int *dataType, void* buf, int* buflen, int time);
+int recvData(int fd, msg* msgbuf, struct timeval* ptv);
 moduleInfo* getModuleInfo();
 int getServerIPbyDns( char* s);
 char* getModuleIp( int id , char* ipaddr );

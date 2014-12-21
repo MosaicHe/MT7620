@@ -41,6 +41,72 @@ int openServerSocket(struct sockaddr_in server_addr)
 }
 
 
+int openListenTcpSocket()
+{
+	struct sockaddr_in local_addr;
+	socklen_t addrlen;
+	int server_fd;
+	int ret;
+
+	addrlen = sizeof(struct sockaddr);
+
+	// listen socket
+	server_fd = socket(PF_INET,SOCK_STREAM,0);
+	if(server_fd < 0)
+	{
+		perror("socket");
+		exit(1);
+	}
+	int on = 1;
+	ret = setsockopt( server_fd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on) );
+
+	bzero(&local_addr ,sizeof(local_addr));
+	local_addr.sin_family = PF_INET;
+	local_addr.sin_port = htons(LISTEN_PORT); 
+	local_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+	if( bind(server_fd, (struct sockaddr*)&local_addr, addrlen) < 0 )
+	{
+		perror("bind");
+		exit(1);
+	}
+
+	if( listen(server_fd,N) < 0)
+	{
+		perror("listen");
+		exit(1);
+	}
+
+	return server_fd;
+
+}
+
+
+int openBroadcastRecieveSocket()
+{
+	int ret=-1;
+	int udpFd=-1;
+	struct sockaddr_in local_addr;
+	udpFd = socket(AF_INET, SOCK_DGRAM, 0); 
+	if (udpFd < 0){
+		perror("udpFd error");
+		return -1;
+	}
+	int on = 1;
+	ret = setsockopt( udpFd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on) );
+	memset((void*) &local_addr, 0, sizeof(struct sockaddr_in));
+	local_addr.sin_family = AF_INET;
+	local_addr.sin_addr.s_addr = htons(INADDR_ANY );
+	local_addr.sin_port = htons(BROADCAST_PORT);
+
+	ret = bind(udpFd, (struct sockaddr*)&local_addr, sizeof(local_addr));
+	if (ret < 0){
+		perror("bind error");
+		return -1;
+	}
+	return udpFd;
+}
+
+
 int sendData(int fd, int dataType, void* buf, int buflen)
 {
 	int ret  = -1;
@@ -54,7 +120,7 @@ int sendData(int fd, int dataType, void* buf, int buflen)
 		p_responseBuf->dataSize = buflen;
 		memcpy( p_responseBuf->dataBuf, buf, buflen);
 	}
-	deb_print("msg length:%d, send data Type:%d, length:%d\n", sizeof(msg), dataType, buflen);
+	deb_print("msg length:%ld, send data Type:%d, length:%d\n", sizeof(msg), dataType, buflen);
 	ret = write(fd, p_responseBuf, sizeof(msg));
 	if(ret< 0){
 		perror("socket write error\n");
@@ -65,42 +131,25 @@ int sendData(int fd, int dataType, void* buf, int buflen)
 	return 0;
 }
 
-int recvData(int fd, int *dataType, void* buf, int* buflen, int time)
+/*
+ * function: read data from socket
+ */
+extern int recvData(int fd, msg* msgbuf, struct timeval* ptv)
 {
-	int ret =-1;
-	msg msgbuf;
-	fd_set rdfds;
-	struct timeval tv;
 
+	int ret =-1;
+	fd_set rdfds;
 	FD_ZERO(&rdfds);
 	FD_SET(fd, &rdfds);
 
-	tv.tv_sec = time;
-	tv.tv_usec = 0;
-
-	ret = select(fd+1, &rdfds, NULL, NULL, &tv);
-	if(ret < 0){
-		perror("select error!\n");
-		return ret;
-	}else if(ret == 0 ){
-		deb_print("select timeout\n");
-		return ret;
-	}else{
-		ret = read(fd, &msgbuf, sizeof(msg));
-		if(ret<0){
-			perror("Socket read error\n");
-			return ret;
-		}
-		*dataType = msgbuf.dataType;		
-		*buflen = msgbuf.dataSize;
-		deb_print("recv data %d, dataType:%d, dataSize:%d\n",ret, *dataType, *buflen);
-		if(*buflen != 0 && buf !=NULL)
-			memcpy(buf, msgbuf.dataBuf, msgbuf.dataSize);
+	ret = select(fd+1,&rdfds, NULL, NULL, ptv);
+	if(ret<0||ret==0){
 		return ret;
 	}
-
+	ret = read(fd, msgbuf, sizeof(msg));
 	return ret;
 }
+
 
 extern int recvFirmware(int fd)
 {
@@ -336,6 +385,8 @@ int waitForServerBroadcast(struct sockaddr_in* p_addr)
 		perror("sock error");
 		return -1;
 	}
+	int on = 1;
+	ret = setsockopt( sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on) );
 
 	memset((void*) &server_addr, 0, sizeof(struct sockaddr_in));
 	server_addr.sin_family = AF_INET;

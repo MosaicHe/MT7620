@@ -34,11 +34,10 @@
 #define deb_print(fmt, arg...)
 #endif	//DEBUG
 
-#define DATASIZE    512
-#define PORT 		8000
-#define LISTEN_PORT 8001
-#define PORT2		8002
-#define SRV_IP "192.168.1.130"
+#define DATASIZE    	512
+#define SERVER_PORT 	8000
+#define BROADCAST_PORT 	8001
+#define LISTEN_PORT		8002
 #define N 5
 
 #define FILENAME "/etc/resolv.conf"
@@ -78,23 +77,27 @@ typedef struct{
 }UDPMessage;
 
 typedef struct{
-	char nvramDev[6];  // "2860" or "rtdev"
+	char nvramDev[8];  // "rt2860" or "rtdev"
 	char item[128];
 	char value[128];
 }moduleNvram;
 
 
-#define REQ_HELLO   		1
+#define REQ_REGISTER		1
 #define REQ_FIRTWARE_UPDATE 2
 #define REQ_CONFIG		    3
 #define REQ_RUN 			4
+#define REQ_REPORT			6
+
+#define RESP_ERROR			-1			
+#define RESP_SUCCESS		 0
 
 #define STATE_IDLE 					0
 #define STATE_HELLO					1
 #define STATE_FIRMWARE_CHECKED 		2
 #define STATE_CONFIG 				3
 #define STATE_RUN 					4
-
+#define STATE_DISCONNECTED			5
 
 #define BROADCAST			100	
 #define HEARTBEAT 			101
@@ -102,6 +105,10 @@ typedef struct{
 #define COMMAND				103
 #define COMMAND_SUCCEED		104
 #define COMMAND_FAIL		105
+
+
+#define NVRAM_SET			106
+#define NVRAM_GET			107
 
 int srv_ip;
 static int srv_fd;

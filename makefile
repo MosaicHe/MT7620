@@ -5,7 +5,7 @@ CFLAGS += -I$(ROOTDIR)/$(LINUXDIR)/drivers/char
 
 all: $(EXEC)
 
-$(EXEC): $(EXEC).c tool.c
+$(EXEC): $(EXEC).c tool.c pingthread.c
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(LDLIBS) -lpthread
 
 romfs:
