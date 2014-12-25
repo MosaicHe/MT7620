@@ -107,9 +107,11 @@ typedef struct{
 #define COMMAND_FAIL		105
 
 
-#define NVRAM_SET			106
-#define NVRAM_GET			107
-
+#define SET_NVRAM			106
+#define GET_NVRAM			107
+#define INIT_INTERNET		108
+#define SET_STALIMIT		109
+#define GET_MACLIST			110
 int srv_ip;
 static int srv_fd;
 

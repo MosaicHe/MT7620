@@ -16,4 +16,7 @@ int waitForServerBroadcast(struct sockaddr_in* p_addr);
 int recvFirmware( int fd);
 void updateFirmware();
 
+void setStaLimit();
+void sendMacList(int fd);
+
 #endif //__TOOL_H

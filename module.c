@@ -8,7 +8,7 @@
 #include	<sys/types.h>
 #include	<sys/socket.h>
 #include	<fcntl.h>
-//#include 	"nvram.h"
+#include 	"nvram.h"
 #include 	"command.h"
 #include 	"tool.h"
 #include	"pingthread.h"
@@ -16,7 +16,6 @@
 #define MAX(a,b) (a>b?a:b)
 
 struct sockaddr_in server_addr;
-
 
 /*
  * register module to server 
@@ -46,7 +45,9 @@ int register2Server()
 	}
 	printf("connect to server\n");
 
+	/*****************************/
 	/******** REQ_REGISTER *******/
+	/*****************************/
 	ret = sendData(srv_fd, REQ_REGISTER, &g_moduleInfo, sizeof(moduleInfo));
 	if(ret < 0){
 		/* FIXME */
@@ -57,8 +58,10 @@ int register2Server()
 	if(ret<0 || ret==0 || msgbuf.dataType != RESP_SUCCESS){
 		return -1;
 	}
-	
+
+	/***********************************/
 	/******* REQ_FIRTWARE_UPDATE *******/
+	/***********************************/
 #ifndef DEBUG_PC
 	ret = sendData(srv_fd, REQ_FIRTWARE_UPDATE, g_moduleInfo.fwVersion, 
 					sizeof(g_moduleInfo.fwVersion));
@@ -85,7 +88,9 @@ int register2Server()
 		exit(0);
 	}
 
+	/**********************/
 	/***** REQ_CONFIG *****/
+	/**********************/
 	ret = sendData(srv_fd, REQ_CONFIG, NULL, 0);
 	if(ret < 0){
 		/* FIXME */
@@ -103,8 +108,10 @@ int register2Server()
 		//doConfiguration(buf, buflen);
 		return -1;
 	}
-	
+
+	/***********************/
 	/******* REQ_RUN ******/
+	/**********************/
 	ret = sendData(srv_fd, REQ_RUN, NULL, 0);
 	if(ret < 0){
 		/* FIXME */
@@ -132,6 +139,8 @@ int executeCommad(int fd)
 	pmsg = (msg*)malloc(sizeof(msg));
 	moduleNvram mNvram;
 	char nvramStr[1024];
+	const char* valueStr;
+	int ndev;
 	struct timeval tv;
 	tv.tv_sec =1;
 	tv.tv_usec=0;
@@ -142,18 +151,46 @@ int executeCommad(int fd)
 		return -1;			
 	}
 	switch(pmsg->dataType){
-		case NVRAM_SET:
+		case SET_NVRAM:
+			deb_print("SET_NVRAM\n");
 			memcpy(&mNvram, pmsg->dataBuf, sizeof(moduleNvram));
-			sprintf(nvramStr,"%s ", mNvram.nvramDev);
-			strcat(nvramStr, mNvram.item);
-			strcat(nvramStr, " ");
-			strcat(nvramStr, mNvram.value);
-			printf("%s\n", nvramStr);
+			if(!strcmp(mNvram.nvramDev, "rtdev"))
+				ndev = RTDEV_NVRAM;
+			else
+				ndev = RT2860_NVRAM;
+			nvram_bufset(ndev, mNvram.item, mNvram.value);
+			nvram_commit(ndev);
+
 			strcpy(pmsg->dataBuf,"Success");
 			pmsg->dataSize = strlen(pmsg->dataBuf)+1;
 			write(fd, pmsg, sizeof(msg));
 			break;
-		case NVRAM_GET:
+
+		case GET_NVRAM:
+			deb_print("GET_NVRAM\n");
+			memcpy(&mNvram, pmsg->dataBuf, sizeof(moduleNvram));
+			if(!strcmp(mNvram.nvramDev, "rtdev"))
+				ndev = RTDEV_NVRAM;
+			else
+				ndev = RT2860_NVRAM;
+			valueStr = nvram_bufget( ndev, mNvram.item);
+			if(valueStr==NULL)
+				strcpy(pmsg->dataBuf,"NULL");
+			else
+				strcpy(pmsg->dataBuf, valueStr);
+			pmsg->dataSize = strlen(pmsg->dataBuf)+1;
+			deb_print("return: %s\n",pmsg->dataBuf);
+			write(fd, pmsg, sizeof(msg));
+			break;
+
+		case INIT_INTERNET:
+			initInternet();
+			break;
+		case GET_MACLIST:
+			sendMacList(fd);
+			break;
+		case SET_STALIMIT:
+			setStaLimit();
 			break;
 		default:
 			break;
