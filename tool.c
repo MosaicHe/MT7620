@@ -12,7 +12,7 @@
 #include	"module.h"
 
 #include   "nvram.h"
-
+#include	"wireless.h"
 #define MODULEID 1
 
 /*
@@ -361,15 +361,23 @@ int getServerIPbyDns( char* s)
 }
 
 
-void setStaLimit()
+void setStaLimit( int num)
 {
-
+	char s[5];
+	sprintf(s,"%d", num);
+	printf("set limitnum:%s\n", s);
+	setlimitNum(s);
 }
 
 
-void sendMacList()
+void sendMacList(int fd, char *ifname)
 {
-
+	struct maclist ml;
+	msg msgbuf;
+	getOnlineMaclist( ifname, &ml);
+	memcpy(msgbuf.dataBuf, &ml, sizeof(ml));
+	msgbuf.dataSize = sizeof(ml);	
+	write(fd, &msgbuf, sizeof(msg));	
 }
 
 

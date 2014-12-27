@@ -10,7 +10,7 @@ LDLIBS	+= -lnvram
 
 all: $(EXEC)
 
-$(EXEC): $(EXEC).c tool.c pingthread.c
+$(EXEC): $(EXEC).c tool.c pingthread.c wireless.c
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(LDLIBS) -lpthread
 
 romfs:

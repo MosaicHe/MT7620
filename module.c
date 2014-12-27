@@ -12,6 +12,7 @@
 #include 	"command.h"
 #include 	"tool.h"
 #include	"pingthread.h"
+#include	"wireless.h"
 
 #define MAX(a,b) (a>b?a:b)
 
@@ -139,8 +140,10 @@ int executeCommad(int fd)
 	pmsg = (msg*)malloc(sizeof(msg));
 	moduleNvram mNvram;
 	char nvramStr[1024];
+	char ifname[16];
 	const char* valueStr;
 	int ndev;
+	int num;
 	struct timeval tv;
 	tv.tv_sec =1;
 	tv.tv_usec=0;
@@ -159,11 +162,23 @@ int executeCommad(int fd)
 			else
 				ndev = RT2860_NVRAM;
 			nvram_bufset(ndev, mNvram.item, mNvram.value);
-			nvram_commit(ndev);
-
+			
 			strcpy(pmsg->dataBuf,"Success");
 			pmsg->dataSize = strlen(pmsg->dataBuf)+1;
 			write(fd, pmsg, sizeof(msg));
+			break;
+
+		case SET_NVRAM_COMMIT:
+			deb_print("SET_NVRAM_COMMIT\n");
+			memcpy(&mNvram, pmsg->dataBuf, sizeof(moduleNvram));
+			if(!strcmp(mNvram.nvramDev, "rtdev"))
+				ndev = RTDEV_NVRAM;
+			else
+				ndev = RT2860_NVRAM;
+			nvram_commit(ndev);
+			strcpy(pmsg->dataBuf,"Success");
+			pmsg->dataSize = strlen(pmsg->dataBuf)+1;
+			write(fd, pmsg, sizeof(msg));			
 			break;
 
 		case GET_NVRAM:
@@ -186,11 +201,22 @@ int executeCommad(int fd)
 		case INIT_INTERNET:
 			initInternet();
 			break;
+
 		case GET_MACLIST:
-			sendMacList(fd);
+			memcpy(ifname, pmsg->dataBuf, pmsg->dataSize);
+			sendMacList(fd, ifname);
 			break;
+
+		case GET_MACNUM:
+			memcpy(ifname, pmsg->dataBuf, pmsg->dataSize);
+			num = getOnlineMacNum(ifname);
+			memcpy(pmsg->dataBuf, num, sizeof(num));
+			pmsg->dataSize=sizeof(num);
+			write(fd, pmsg, sizeof(msg));			
+			break;
+
 		case SET_STALIMIT:
-			setStaLimit();
+			setStaLimit( *(int*)(pmsg->dataBuf));
 			break;
 		default:
 			break;
@@ -213,8 +239,7 @@ int waitForServerCommand()
 		printf("openListenTcpSocket error\n");
 		exit(-1);
 	}
-	while(1){
-		deb_print(" in while loop\n");
+	while( 1 ){
 		FD_ZERO(&readfd);
 		FD_SET(listenFd, &readfd);
 		tv.tv_sec = 10;
@@ -225,7 +250,6 @@ int waitForServerCommand()
 			close(listenFd);
 			return -1;
 		}else if(ret==0){
-			deb_print("select timeout\n");
 			if(g_state==STATE_DISCONNECTED)
 				return 0;	
 		}
@@ -279,12 +303,12 @@ int main(int argc, char *argv[])
 				perror("select error:");
 				break;
 			case 0: 
-				printf("select timeout\n");
-				timeoutCounter++;
-				if(timeoutCounter>3){
-					printf("disconnected to server\n");
-					exit(-1);
-				}
+//				printf("select timeout\n");
+//				timeoutCounter++;
+//				if(timeoutCounter>3){
+//					printf("disconnected to server\n");
+//					exit(-1);
+//				}
 				break;
 			default:
 				count = recvfrom(udpFd, &umsg, sizeof(msg), 0,
@@ -294,8 +318,9 @@ int main(int argc, char *argv[])
 					printf("\nrecvfrom server broadcast:\n\t IP: %s, port: %d\n",
 						(char *)inet_ntoa(server_addr.sin_addr),ntohs(server_addr.sin_port));
 
-					// register to server					
-					ret=register2Server();
+					// register to server
+					if(g_state==STATE_IDLE)					
+						ret=register2Server();
 					if(ret<0)
 						break;
 					

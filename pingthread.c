@@ -43,13 +43,16 @@ void * pingThread(void* arg)
 			return;		
 		}else if(ret==0){
 			timeout++;
-			if(timeout> TIMEOUTLIMIT)
+			if(timeout> TIMEOUTLIMIT){
 				g_state = STATE_DISCONNECTED;
+				printf("long time did not receive heartbeat, g_state=STATE_DISCONNECTED\n");
+				return ;
+			}	
 		}else{
 			ret = recvfrom(udpFd, &umsg, sizeof(msg), 0,
 						(struct sockaddr*)&server_addr, &addrlen);
 			if(umsg.dataType == HEARTBEAT){
-				deb_print("recvfrom server heartbeat\n");
+				deb_print("HeartBeat\n");
 				timeout=0;
 				umsg.dataType = HEARTBEAT_ACK;
 				sendto(udpFd, &umsg, sizeof(msg), 0,

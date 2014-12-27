@@ -106,12 +106,13 @@ typedef struct{
 #define COMMAND_SUCCEED		104
 #define COMMAND_FAIL		105
 
-
 #define SET_NVRAM			106
 #define GET_NVRAM			107
+#define SET_NVRAM_COMMIT	111
 #define INIT_INTERNET		108
 #define SET_STALIMIT		109
 #define GET_MACLIST			110
+#define GET_MACNUM			112
 int srv_ip;
 static int srv_fd;
 
