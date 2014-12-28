@@ -263,16 +263,21 @@ extern moduleInfo* getModuleInfo()
 {
 	int channel, channel_5g;
 
-	bzero(&g_moduleInfo, sizeof(moduleInfo));	
-	const char* ssid = nvram_bufget(RT2860_NVRAM, "SSID1");
-	memcpy(g_moduleInfo.ssid_24g, ssid, strlen(ssid));
+	bzero(&g_moduleInfo, sizeof(moduleInfo));
+	if( !getIfLive("ra0") ){
+		g_moduleInfo.state_24g = 1;
+		const char* ssid = nvram_bufget(RT2860_NVRAM, "SSID1");
+		memcpy(g_moduleInfo.ssid_24g, ssid, strlen(ssid));
 	
-	const char* ch = nvram_bufget(RT2860_NVRAM, "Channel");
-	channel = atoi(ch);
-	g_moduleInfo.channel_24g = channel;
+		const char* ch = nvram_bufget(RT2860_NVRAM, "Channel");
+		channel = atoi(ch);
+		g_moduleInfo.channel_24g = channel;
 	
-	getIfMac("ra0", g_moduleInfo.mac_24g);
-	
+		getIfMac("ra0", g_moduleInfo.mac_24g);
+	}else{
+		g_moduleInfo.state_24g=0;
+	}
+
 	if( !getIfLive("rai0") ){
 		g_moduleInfo.state_5g = 1;
 		char *ssid_5g = nvram_bufget(RTDEV_NVRAM, "SSID1");
@@ -283,17 +288,32 @@ extern moduleInfo* getModuleInfo()
 		g_moduleInfo.channel_5g = channel_5g;
 		getIfMac("rai0", g_moduleInfo.mac_5g);
 	}else{
-		g_moduleInfo.state_5g = -1;
+		g_moduleInfo.state_5g = 0;
 	}
 	return 0;
 }
 
+void printModuleInfo()
+{
+	printf("Module information:");
+	if(g_moduleInfo.state_24g){
+		printf("\tra0   state:%d\n",g_moduleInfo.state_24g);
+		printf("\tra0    SSID:%s\n",g_moduleInfo.ssid_24g);
+		printf("\tra0 Channel:%d\n",g_moduleInfo.channel_24g);
+	}
+	if(g_moduleInfo.state_5g){
+		printf("\trai0   state:%d\n",g_moduleInfo.state_5g);
+		printf("\trai0    SSID:%s\n",g_moduleInfo.ssid_5g);
+		printf("\trai0 Channel:%d\n",g_moduleInfo.channel_5g);
+	}
+}
 
 extern int initiateModule()
 {	
 	g_moduleID = MODULEID;
 	g_state = STATE_IDLE;
 	getModuleInfo();
+	printModuleInfo();
 }
 
 int checkId(int id)

@@ -49,6 +49,7 @@ int register2Server()
 	/*****************************/
 	/******** REQ_REGISTER *******/
 	/*****************************/
+	printModuleInfo();
 	ret = sendData(srv_fd, REQ_REGISTER, &g_moduleInfo, sizeof(moduleInfo));
 	if(ret < 0){
 		/* FIXME */
@@ -328,7 +329,8 @@ int main(int argc, char *argv[])
 					if(ret<0)
 						exit(-1);
 
-					//this function will never return until catch error!
+					// this function will never return until catch error 
+					// or lost connect to server!
 					waitForServerCommand();
 				}
 				break;
