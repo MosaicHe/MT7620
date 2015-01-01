@@ -252,6 +252,18 @@ int getIfIp(char *ifname, char *if_addr)
 	return 0;
 }
 
+//get a ipaddr from server by dhcpc and write it to nvram
+int getIpaddr()
+{
+	char ip[20];
+	system("killall udhcpc");
+	system("/sbin/udhcpc -i br0 -s /sbin/udhcpc.sh");
+	sleep(3);
+	getIfIp("br0", ip);
+	nvram_bufset(RT2860_NVRAM, "lan_ipaddr", ip);
+	nvram_commit(RT2860_NVRAM);
+}
+
 
 extern int initInternet(void)
 {
@@ -308,8 +320,13 @@ void printModuleInfo()
 	}
 }
 
+
+
+// get ip from server by udhdc
+// initiate module var
 extern int initiateModule()
 {	
+	getIpaddr();
 	g_moduleID = MODULEID;
 	g_state = STATE_IDLE;
 	getModuleInfo();

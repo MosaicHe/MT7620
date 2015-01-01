@@ -281,10 +281,11 @@ int main(int argc, char *argv[])
 	struct timeval timeout;
 	g_state = STATE_IDLE;
 	int timeoutCounter = 0;
-	initiateModule();
 
+	//before waiting for server broadcast, need to initateModule  
+	initiateModule();
 	while (1)
-	{
+	{	
 		udpFd = openBroadcastRecieveSocket();
 		if(udpFd<0){
 			printf("openBroadcastRecieveSocket error\n");
