@@ -10,7 +10,7 @@ LDLIBS	+= -lnvram
 
 all: $(EXEC) test
 
-$(EXEC): $(EXEC).c tool.c pingthread.c wireless.c gpio.c
+$(EXEC): $(EXEC).c tool.c pingthread.c wireless.c
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(LDLIBS) -lpthread
 
 test: test.c tool.c wireless.c

@@ -113,6 +113,8 @@ typedef struct{
 #define SET_STALIMIT		109
 #define GET_MACLIST			110
 #define GET_MACNUM			112
+#define SYSTEM_CMD			113
+
 int srv_ip;
 static int srv_fd;
 

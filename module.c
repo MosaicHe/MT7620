@@ -219,6 +219,11 @@ int executeCommad(int fd)
 		case SET_STALIMIT:
 			setStaLimit( *(int*)(pmsg->dataBuf));
 			break;
+		
+		case SYSTEM_CMD:
+			system(pmsg->dataBuf);
+			break;
+
 		default:
 			break;
 	}
@@ -243,7 +248,7 @@ int waitForServerCommand()
 	while( 1 ){
 		FD_ZERO(&readfd);
 		FD_SET(listenFd, &readfd);
-		tv.tv_sec = 10;
+		tv.tv_sec = 5;
 		tv.tv_usec = 0;
 		ret = select(listenFd + 1, &readfd, NULL, NULL, &tv); 
 		if(ret<0){
@@ -298,6 +303,7 @@ int main(int argc, char *argv[])
 		FD_ZERO(&readfd);
 		FD_SET(udpFd, &readfd);
 
+		//wait for broadcast
 		ret = select(udpFd + 1, &readfd, NULL, NULL, &timeout); 
 		switch (ret)
 		{
@@ -305,7 +311,7 @@ int main(int argc, char *argv[])
 				perror("select error:");
 				break;
 			case 0: 
-//				printf("select timeout\n");
+				printf("select timeout\n");
 //				timeoutCounter++;
 //				if(timeoutCounter>3){
 //					printf("disconnected to server\n");

@@ -1,1 +1,1 @@
-extern int getApid();
+int gpio_read(int gpiog);
