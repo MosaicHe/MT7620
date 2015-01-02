@@ -291,7 +291,14 @@ extern moduleInfo* getModuleInfo()
 
 extern int initiateModule()
 {	
-	g_moduleID = MODULEID;
+	//g_moduleID = MODULEID;
+	g_moduleID = getApid();
+	if(g_moduleID<1 || g_moduleID>3){
+		g_moduleID=0;
+		printf("get module ID error\n");
+		exit(1);
+	}
+	
 	g_state = STATE_IDLE;
 	getModuleInfo();
 }
