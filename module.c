@@ -49,6 +49,7 @@ int register2Server()
 	/*****************************/
 	/******** REQ_REGISTER *******/
 	/*****************************/
+	printModuleInfo();
 	ret = sendData(srv_fd, REQ_REGISTER, &g_moduleInfo, sizeof(moduleInfo));
 	if(ret < 0){
 		/* FIXME */
@@ -280,10 +281,11 @@ int main(int argc, char *argv[])
 	struct timeval timeout;
 	g_state = STATE_IDLE;
 	int timeoutCounter = 0;
-	initiateModule();
 
+	//before waiting for server broadcast, need to initateModule  
+	initiateModule();
 	while (1)
-	{
+	{	
 		udpFd = openBroadcastRecieveSocket();
 		if(udpFd<0){
 			printf("openBroadcastRecieveSocket error\n");
@@ -328,7 +330,8 @@ int main(int argc, char *argv[])
 					if(ret<0)
 						exit(-1);
 
-					//this function will never return until catch error!
+					// this function will never return until catch error 
+					// or lost connect to server!
 					waitForServerCommand();
 				}
 				break;

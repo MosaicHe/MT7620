@@ -4,6 +4,7 @@
 
 #include "module.h"
 
+void printModuleInfo();
 int openServerSocket(int srv_port, char* serverIp);
 int sendData(int fd, int dataType, void* buf, int buflen);
 int recvData(int fd, msg* msgbuf, struct timeval* ptv);

@@ -8,14 +8,18 @@ CFLAGS	+= -I$(ROOTDIR)/lib/libnvram
 CFLAGS += -I$(ROOTDIR)/user/goahead/src
 LDLIBS	+= -lnvram
 
-all: $(EXEC)
+all: $(EXEC) test
 
 $(EXEC): $(EXEC).c tool.c pingthread.c wireless.c gpio.c
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(LDLIBS) -lpthread
 
+test: test.c tool.c wireless.c
+	$(CC) $(CFLAGS) $(LDFLAGS) $(LDLIBS) -o test $^
+
 romfs:
 	$(ROMFSINST) /bin/$(EXEC)
+	$(ROMFSINST) /bin/test
 
 clean:
-	-rm -f $(EXEC) *.elf *.gdb *.o *~
+	-rm -f $(EXEC) *.elf *.gdb *.o *~ test
 

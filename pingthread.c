@@ -3,7 +3,7 @@
 
 
 #define PING_TIMEOUT 10
-#define TIMEOUTLIMIT 5
+#define TIMEOUTLIMIT 2
 #define PING_PORT	8003
 void * pingThread(void* arg)
 {
