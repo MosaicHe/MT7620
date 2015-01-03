@@ -127,7 +127,7 @@ int register2Server()
 		printf(" REQ_RUN error\n");
 		return -1;
 	}
-
+	g_state = STATE_RUN;
 	close(srv_fd);
 	srv_fd = -1;
 	return 0;
@@ -222,6 +222,7 @@ int executeCommad(int fd)
 		
 		case SYSTEM_CMD:
 			system(pmsg->dataBuf);
+			printf("pmsg->dataBuf:%s\n", pmsg->dataBuf);
 			break;
 
 		default:
@@ -256,8 +257,11 @@ int waitForServerCommand()
 			close(listenFd);
 			return -1;
 		}else if(ret==0){
-			if(g_state==STATE_DISCONNECTED)
+			if(g_state==STATE_DISCONNECTED){
+				close(listenFd);
+				printf("exit from waitForServerCommand()\n");
 				return 0;	
+			}
 		}
 		else{
 			 connectFd = accept(listenFd, NULL, NULL);
@@ -327,7 +331,7 @@ int main(int argc, char *argv[])
 						(char *)inet_ntoa(server_addr.sin_addr),ntohs(server_addr.sin_port));
 
 					// register to server
-					if(g_state==STATE_IDLE)					
+					if(g_state==STATE_IDLE ||g_state==STATE_DISCONNECTED)					
 						ret=register2Server();
 					if(ret<0)
 						break;
@@ -342,7 +346,7 @@ int main(int argc, char *argv[])
 				}
 				break;
 		}
-		pthread_cancel(ptd);
+		pthread_cancel(&ptd);
 		close(udpFd);
 	}
 	return 0;

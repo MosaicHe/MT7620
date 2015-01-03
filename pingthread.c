@@ -21,6 +21,8 @@ void * pingThread(void* arg)
 		perror("udpFd error");
 		return;
 	}
+	int on = 1;
+	ret = setsockopt( udpFd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on) );
 
 	memset((void*) &local_addr, 0, sizeof(struct sockaddr_in));
 	local_addr.sin_family = AF_INET;
@@ -30,6 +32,7 @@ void * pingThread(void* arg)
 	ret = bind(udpFd, (struct sockaddr*)&local_addr, sizeof(local_addr));
 	if (ret < 0){
 		perror("bind error");
+		close(udpFd);
 		return ;
 	}
 
@@ -40,12 +43,14 @@ void * pingThread(void* arg)
 		tv.tv_usec= 0;
 		ret = select(udpFd+1, &rdfds, NULL, NULL, &tv);
 		if(ret<0){
+			close(udpFd);
 			return;		
 		}else if(ret==0){
 			timeout++;
 			if(timeout> TIMEOUTLIMIT){
 				g_state = STATE_DISCONNECTED;
 				printf("long time did not receive heartbeat, g_state=STATE_DISCONNECTED\n");
+				close(udpFd);
 				return ;
 			}	
 		}else{
